@@ -1,0 +1,12 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/bin
+/obj/Debug
+/obj/Release
+/obj/SmarterASP/Package/PackageTmp/bin
+/obj/SmarterASP/_WPPLastBuildInfo.txt
+/obj/SmarterASP/DashOwl.pdb
+/obj/SmarterASP/DashOwl.dll
+/obj/SmarterASP
