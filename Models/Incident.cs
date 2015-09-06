@@ -9,9 +9,7 @@ namespace DashOwl.Models
     {
         public int ID { get; set; }
 
-        public DateTime CreationDate { get; set; }
-
-        //public bool DeleteMe { set; get; }
+        public DateTime CreationDate { get; set; }        
 
         public string Description { get; set; }
 

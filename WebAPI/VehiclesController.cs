@@ -11,6 +11,7 @@ using System.Web.Http;
 using System.Web.Http.Description;
 using DashOwl.DAL;
 using DashOwl.Models;
+using AutoMapper;
 
 namespace DashOwl.WebAPI
 {
@@ -20,8 +21,14 @@ namespace DashOwl.WebAPI
     public class VehiclesController : ApiController
     {
         private DashOwlContext db = new DashOwlContext();
+        private readonly IVehicleRepository _vehicleRepo;
 
-        // GET: api/Vehicles
+        public VehiclesController(IVehicleRepository repository)
+        {
+            this._vehicleRepo = repository;
+        }
+
+        // GET: api/Incidents/1/Vehicles
         /// <summary>
         /// Gets a list of Vehicles related to Incident.
         /// </summary>
@@ -30,21 +37,15 @@ namespace DashOwl.WebAPI
         [Route("api/incidents/{id}/vehicles")]
         public async Task<IHttpActionResult> GetVehicles(int id)
         {
-            var vehicle = await db.Vehicles.Select(p => new VehicleDetailsDto
-            {
-                ID = p.ID,                
-                PlateNumber = p.PlateNumber,
-                IncidentID = p.IncidentID                
-            })
-                .Where(i => i.IncidentID == id).ToListAsync();
-
-
-            if (vehicle == null)
+            List<Vehicle> vehicles = _vehicleRepo.GetAllForIncident(id);
+            IList<VehicleDto> vehiclesDtoList = Mapper.Map<IList<Vehicle>, IList<VehicleDto>>(vehicles);
+            
+            if (vehiclesDtoList == null)
             {
                 return NotFound();
             }
 
-            return Ok(vehicle);
+            return Ok(vehiclesDtoList);
         }
 
         // GET: api/Vehicles/5
@@ -53,63 +54,39 @@ namespace DashOwl.WebAPI
         /// </summary>
         /// <param name="id">The Vehicle ID</param>
         /// <returns>Vehicle</returns>
-        [ResponseType(typeof(VehicleDetailsDto))]
+        [ResponseType(typeof(VehicleDto))]
         public async Task<IHttpActionResult> GetVehicle(int id)
         {
-            VehicleDetailsDto vehicle = await db.Vehicles.Select(p => new VehicleDetailsDto
-            {
-                ID = p.ID,
-                IncidentID = p.IncidentID,
-                PlateNumber = p.PlateNumber
-            })
-                .Where(i => i.ID == id)
-                .FirstOrDefaultAsync();
+            Vehicle vehicle = _vehicleRepo.GetSingle(id);
+            var vehicleDto = Mapper.Map<Vehicle, VehicleDto>(vehicle);
 
-            if (vehicle == null)
+            if (vehicleDto == null)
             {
                 return NotFound();
             }
 
-            return Ok(vehicle);
+            return Ok(vehicleDto);
         }
                 
-        // PUT: api/Vehicles/5
+        // PUT: api/Vehicles
         /// <summary>
         /// Updates Vehicle.
         /// </summary>
         /// <param name="id">Vehicle ID</param>
-        /// <param name="vehicle">Modified Vehicle</param>
+        /// <param name="vehicleDto">Modified VehicleDto. JSON sample: {"ID":1,"PlateNumber":"BC3555CH","IncidentID":0}</param>
         /// <returns>Nothing, if operation was successful</returns>
         [ResponseType(typeof(void))]
-        public async Task<IHttpActionResult> PutVehicle(int id, Vehicle vehicle)
+        public async Task<IHttpActionResult> PutVehicle([FromBody]VehicleDto vehicleDto)
         {
+            Vehicle vehicle = Mapper.Map<VehicleDto, Vehicle>(vehicleDto);
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (id != vehicle.ID)
-            {
-                return BadRequest();
-            }
-
-            db.Entry(vehicle).State = EntityState.Modified;
-
-            try
-            {
-                await db.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!VehicleExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            _vehicleRepo.Edit(vehicle);
+            _vehicleRepo.Save();
 
             return StatusCode(HttpStatusCode.NoContent);
         }
@@ -118,29 +95,24 @@ namespace DashOwl.WebAPI
         /// <summary>
         /// Creates Vehicle.
         /// </summary>
-        /// <param name="vehicleDetailsDto">A new Vehicle</param>
+        /// <param name="vehicleDto">A new VehicleDto. JSON sample: {"ID":1,"PlateNumber":"BC3555CH","IncidentID":0}</param>
         /// <returns>Created Vehicle</returns>
-        [ResponseType(typeof(VehicleDetailsDto))]
-        public async Task<IHttpActionResult> PostVehicle(VehicleDetailsDto vehicleDetailsDto)
+        [ResponseType(typeof(VehicleDto))]
+        public async Task<IHttpActionResult> PostVehicle(VehicleDto vehicleDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var vehicle = new Vehicle()
-            {
-                ID = vehicleDetailsDto.ID,
-                PlateNumber = vehicleDetailsDto.PlateNumber,
-                IncidentID = vehicleDetailsDto.IncidentID
-            };
+            var vehicle = Mapper.Map<VehicleDto, Vehicle>(vehicleDto);
 
-            db.Vehicles.Add(vehicle);
-            await db.SaveChangesAsync();
+            _vehicleRepo.Add(vehicle);
+            _vehicleRepo.Save();
 
-            vehicleDetailsDto.ID = vehicle.ID;
+            vehicleDto = Mapper.Map<Vehicle, VehicleDto>(vehicle);
 
-            return CreatedAtRoute("DefaultApi", new { id = vehicle.ID }, vehicle);
+            return Ok(vehicleDto);
         }
 
         // DELETE: api/Vehicles/5
@@ -152,23 +124,18 @@ namespace DashOwl.WebAPI
         [ResponseType(typeof(Vehicle))]
         public async Task<IHttpActionResult> DeleteVehicle(int id)
         {
-            Vehicle vehicle = await db.Vehicles.FindAsync(id);
-            if (vehicle == null)
+            Vehicle vehicle = _vehicleRepo.GetSingle(id);
+            var vehicleDto = Mapper.Map<Vehicle, VehicleDto>(vehicle);
+
+            if (vehicleDto == null)
             {
                 return NotFound();
             }
 
-            db.Vehicles.Remove(vehicle);
-            await db.SaveChangesAsync();
+            _vehicleRepo.Delete(vehicle);
+            _vehicleRepo.Save();
 
-            var vehicleDetailsDto = new VehicleDetailsDto
-            {
-                ID = vehicle.ID,
-                IncidentID = vehicle.IncidentID,
-                PlateNumber = vehicle.PlateNumber
-            };
-
-            return Ok(vehicleDetailsDto);
+            return Ok(vehicleDto);
         }
 
         protected override void Dispose(bool disposing)

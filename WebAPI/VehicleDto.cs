@@ -5,7 +5,7 @@ using System.Web;
 
 namespace DashOwl.WebAPI
 {
-    public class VehicleDetailsDto
+    public class VehicleDto
     {
         public int ID { get; set; }
 

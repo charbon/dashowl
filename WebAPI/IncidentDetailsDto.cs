@@ -14,8 +14,8 @@ namespace DashOwl.WebAPI
 
         public string Description { get; set; }
 
-        public List<MediaAssetDetailsDto> MediaAssets { get; set; }
+        public List<MediaAssetDto> MediaAssets { get; set; }
 
-        public List<VehicleDetailsDto> Vehicles { get; set; }
+        public List<VehicleDto> Vehicles { get; set; }
     }
 }

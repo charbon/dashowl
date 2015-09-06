@@ -17,8 +17,9 @@ namespace DashOwl.Models
 
         [DisplayFormat(ConvertEmptyStringToNull = false)]
         public string ExternalURL { get; set; }
+
         public DateTime CreationDate { get; set; }
-        //[ForeignKey("ID")]
-        public virtual Incident Incident { get; set; }
+        
+        public virtual ICollection<Incident> Incidents { get; set; }
     }
 }

@@ -4,6 +4,28 @@
         <name>DashOwl</name>
     </assembly>
     <members>
+        <member name="M:DashOwl.App_Start.NinjectWebCommon.Start">
+            <summary>
+            Starts the application
+            </summary>
+        </member>
+        <member name="M:DashOwl.App_Start.NinjectWebCommon.Stop">
+            <summary>
+            Stops the application.
+            </summary>
+        </member>
+        <member name="M:DashOwl.App_Start.NinjectWebCommon.CreateKernel">
+            <summary>
+            Creates the kernel that will manage your application.
+            </summary>
+            <returns>The created kernel.</returns>
+        </member>
+        <member name="M:DashOwl.App_Start.NinjectWebCommon.RegisterServices(Ninject.IKernel)">
+            <summary>
+            Load your modules or register your services here!
+            </summary>
+            <param name="kernel">The kernel.</param>
+        </member>
         <member name="M:DashOwl.Areas.HelpPage.ApiDescriptionExtensions.GetFriendlyId(System.Web.Http.Description.ApiDescription)">
             <summary>
             Generates an URI-friendly ID for the <see cref="T:System.Web.Http.Description.ApiDescription"/>. E.g. "Get-Values-id_name" instead of "GetValues/{id}?name={name}"
@@ -499,19 +521,19 @@
             <param name="id">The Incident ID</param>
             <returns>Incident</returns>
         </member>
-        <member name="M:DashOwl.IncidentsController.PutIncident(System.Int32,DashOwl.Models.Incident)">
+        <member name="M:DashOwl.IncidentsController.PutIncident(DashOwl.WebAPI.IncidentDetailsDto)">
             <summary>
             Updates Incident.
             </summary>
             <param name="id">Incident ID</param>
-            <param name="incident">Modified Incident</param>
+            <param name="incident">Modified Incident. JSON sample: {"ID":1,"CreationDate":"2015-05-01T00:00:00","Description":"Some dummy description 1 test123"}</param>
             <returns>Nothing, if operation was successful</returns>
         </member>
         <member name="M:DashOwl.IncidentsController.PostIncident(DashOwl.WebAPI.IncidentDetailsDto)">
             <summary>
             Creates Incident.
             </summary>
-            <param name="incidentDetailsDto">A new Incident</param>
+            <param name="incidentDetailsDto">A new Incident. JSON sample:{"Description":"Some dummy description 1 test123","CreationDate":"2014-12-31T00:00:00"}</param>
             <returns>Created Incident</returns>
         </member>
         <member name="M:DashOwl.IncidentsController.DeleteIncident(System.Int32)">
@@ -540,21 +562,19 @@
             <param name="id">The ID of MediaAsset</param>
             <returns>MediaAsset</returns>
         </member>
-        <member name="M:DashOwl.WebAPI.MediaAssetsController.PutMediaAsset(System.Int32,DashOwl.Models.MediaAsset)">
+        <member name="M:DashOwl.WebAPI.MediaAssetsController.PutMediaAsset(DashOwl.WebAPI.MediaAssetDto)">
             <summary>
             Creates MediaAsset
-            </summary>
-            <param name="id">The MediaAsset ID</param>
-            <param name="mediaAsset">Modified MediaAsset</param>
+            </summary>        
+            <param name="mediaAssetDto">Modified MediaAssetDto. JSON sample: {"ID":2,"ServerURL":"/MediaStorage/3.jpg","ExternalURL":"","IncidentID":1,"CreationDate":"2014-12-31T00:00:00"}</param>
             <returns>Nothing, if operation was successful</returns>
         </member>
-        <member name="M:DashOwl.WebAPI.MediaAssetsController.PostMediaAsset(DashOwl.WebAPI.MediaAssetDetailsDto)">
-             <summary>
-             Creates MediaAsset.
-             </summary>
-             <param name="mediaAssetDetailsDto">A new MediaAsset</param>
-             <returns>Created MediaAsset</returns>
-            {"ServerURL":"/MediaStorage/7.jpg","ExternalURL":"","IncidentID":"1","CreationDate":"2014-12-31T00:00:00"}
+        <member name="M:DashOwl.WebAPI.MediaAssetsController.PostMediaAsset(DashOwl.WebAPI.MediaAssetDto)">
+            <summary>
+            Creates MediaAsset.
+            </summary>
+            <param name="mediaAssetDto">A new MediaAssetDto. JSON sample: {"ServerURL":"/MediaStorage/7.jpg","ExternalURL":"","IncidentID":"1","CreationDate":"2014-12-31T00:00:00"}</param>
+            <returns>Created MediaAsset</returns>        
         </member>
         <member name="M:DashOwl.WebAPI.MediaAssetsController.DeleteMediaAsset(System.Int32)">
             <summary>
@@ -593,19 +613,19 @@
             <param name="id">The Vehicle ID</param>
             <returns>Vehicle</returns>
         </member>
-        <member name="M:DashOwl.WebAPI.VehiclesController.PutVehicle(System.Int32,DashOwl.Models.Vehicle)">
+        <member name="M:DashOwl.WebAPI.VehiclesController.PutVehicle(DashOwl.WebAPI.VehicleDto)">
             <summary>
             Updates Vehicle.
             </summary>
             <param name="id">Vehicle ID</param>
-            <param name="vehicle">Modified Vehicle</param>
+            <param name="vehicleDto">Modified VehicleDto. JSON sample: {"ID":1,"PlateNumber":"BC3555CH","IncidentID":0}</param>
             <returns>Nothing, if operation was successful</returns>
         </member>
-        <member name="M:DashOwl.WebAPI.VehiclesController.PostVehicle(DashOwl.WebAPI.VehicleDetailsDto)">
+        <member name="M:DashOwl.WebAPI.VehiclesController.PostVehicle(DashOwl.WebAPI.VehicleDto)">
             <summary>
             Creates Vehicle.
             </summary>
-            <param name="vehicleDetailsDto">A new Vehicle</param>
+            <param name="vehicleDto">A new VehicleDto. JSON sample: {"ID":1,"PlateNumber":"BC3555CH","IncidentID":0}</param>
             <returns>Created Vehicle</returns>
         </member>
         <member name="M:DashOwl.WebAPI.VehiclesController.DeleteVehicle(System.Int32)">

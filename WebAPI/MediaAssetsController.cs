@@ -12,6 +12,7 @@ using System.Web.Http.Description;
 using DashOwl.DAL;
 using DashOwl.Models;
 using System.Web.Http.ModelBinding;
+using AutoMapper;
 
 namespace DashOwl.WebAPI
 {
@@ -21,8 +22,14 @@ namespace DashOwl.WebAPI
     public class MediaAssetsController : ApiController
     {
         private DashOwlContext db = new DashOwlContext();
+        private readonly IMediaAssetRepository _mediaAssetRepo;
+        
+        public MediaAssetsController(IMediaAssetRepository repository)
+        {
+            this._mediaAssetRepo = repository;
+        }
 
-        // GET: api/MediaAssets
+        // GET: api/Incidents/1/MediaAssets
         /// <summary>
         /// Gets a list of Vehicles related to Incident.
         /// </summary>
@@ -31,42 +38,28 @@ namespace DashOwl.WebAPI
         [Route("api/incidents/{id}/mediaassets")]
         public async Task<IHttpActionResult> GetMediaAssets(int id)
         {
-            var media = await db.MediaAssets.Select(p => new MediaAssetDetailsDto
-            {
-                ID = p.ID,
-                ServerURL = p.ServerURL,
-                ExternalURL = p.ExternalURL,
-                IncidentID = p.IncidentID,
-                CreationDate = p.CreationDate
-            })
-                .Where(i => i.IncidentID == id).ToListAsync();                
+            List<MediaAsset> assets = _mediaAssetRepo.GetAllForIncident(id);
+            IList<MediaAssetDto> mediaAssetsDtoList = Mapper.Map<IList<MediaAsset>, IList<MediaAssetDto>>(assets);
 
-            if (media == null)
+            if (mediaAssetsDtoList == null)
             {
                 return NotFound();
             }
 
-            return Ok(media);
+            return Ok(mediaAssetsDtoList);
         }
 
+        // GET: api/MediaAssets/5
         /// <summary>
         /// Gets MediaAsset by ID.
         /// </summary>
         /// <param name="id">The ID of MediaAsset</param>
         /// <returns>MediaAsset</returns>
-        [ResponseType(typeof(MediaAssetDetailsDto))]
+        [ResponseType(typeof(MediaAssetDto))]
         public async Task<IHttpActionResult> GetMediaAsset(int id)
         {
-            MediaAssetDetailsDto media = await db.MediaAssets.Select(p => new MediaAssetDetailsDto
-            {
-                ID = p.ID,
-                ServerURL = p.ServerURL,
-                ExternalURL = p.ExternalURL,
-                IncidentID = p.IncidentID,
-                CreationDate = p.CreationDate
-            })
-                .Where(i => i.ID == id)
-                .FirstOrDefaultAsync();
+            MediaAsset asset = _mediaAssetRepo.GetSingle(id);
+            var media = Mapper.Map<MediaAsset, MediaAssetDto>(asset);
 
             if (media == null)
             {
@@ -76,42 +69,24 @@ namespace DashOwl.WebAPI
             return Ok(media);
         }
 
+        // PUT: api/MediaAsset
         /// <summary>
         /// Creates MediaAsset
-        /// </summary>
-        /// <param name="id">The MediaAsset ID</param>
-        /// <param name="mediaAsset">Modified MediaAsset</param>
+        /// </summary>        
+        /// <param name="mediaAssetDto">Modified MediaAssetDto. JSON sample: {"ID":2,"ServerURL":"/MediaStorage/3.jpg","ExternalURL":"","IncidentID":1,"CreationDate":"2014-12-31T00:00:00"}</param>
         /// <returns>Nothing, if operation was successful</returns>
         [ResponseType(typeof(void))]
-        public async Task<IHttpActionResult> PutMediaAsset(int id, MediaAsset mediaAsset)
+        public async Task<IHttpActionResult> PutMediaAsset([FromBody] MediaAssetDto mediaAssetDto)
         {
+            MediaAsset mediaAsset = Mapper.Map<MediaAssetDto, MediaAsset>(mediaAssetDto);
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
-            }
-
-            if (id != mediaAsset.ID)
-            {
-                return BadRequest();
-            }
-
-            db.Entry(mediaAsset).State = EntityState.Modified;
-
-            try
-            {
-                await db.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!MediaAssetExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            }            
+                        
+            _mediaAssetRepo.Edit(mediaAsset);
+            _mediaAssetRepo.Save();            
 
             return StatusCode(HttpStatusCode.NoContent);
         }
@@ -119,31 +94,24 @@ namespace DashOwl.WebAPI
         /// <summary>
         /// Creates MediaAsset.
         /// </summary>
-        /// <param name="mediaAssetDetailsDto">A new MediaAsset</param>
-        /// <returns>Created MediaAsset</returns>
-        ///{"ServerURL":"/MediaStorage/7.jpg","ExternalURL":"","IncidentID":"1","CreationDate":"2014-12-31T00:00:00"}
-        [ResponseType(typeof(MediaAssetDetailsDto))]
-        public async Task<IHttpActionResult> PostMediaAsset(MediaAssetDetailsDto mediaAssetDetailsDto)
+        /// <param name="mediaAssetDto">A new MediaAssetDto. JSON sample: {"ServerURL":"/MediaStorage/7.jpg","ExternalURL":"","IncidentID":"1","CreationDate":"2014-12-31T00:00:00"}</param>
+        /// <returns>Created MediaAsset</returns>        
+        [ResponseType(typeof(MediaAssetDto))]
+        public async Task<IHttpActionResult> PostMediaAsset([FromBody] MediaAssetDto mediaAssetDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            var mediaAsset = new MediaAsset()
-            {
-                CreationDate = mediaAssetDetailsDto.CreationDate,
-                ExternalURL = mediaAssetDetailsDto.ExternalURL,
-                IncidentID = mediaAssetDetailsDto.IncidentID,
-                ServerURL = mediaAssetDetailsDto.ServerURL
-            };
+            var mediaAsset = Mapper.Map<MediaAssetDto, MediaAsset>(mediaAssetDto);
 
-            db.MediaAssets.Add(mediaAsset);
-            await db.SaveChangesAsync();
+            _mediaAssetRepo.Add(mediaAsset);
+            _mediaAssetRepo.Save();
 
-            mediaAssetDetailsDto.ID = mediaAsset.ID;
+            mediaAssetDto = Mapper.Map<MediaAsset, MediaAssetDto>(mediaAsset);
 
-            return CreatedAtRoute("DefaultApi", new { id = mediaAsset.ID }, mediaAssetDetailsDto);
+            return Ok(mediaAssetDto);
         }
 
         /// <summary>
@@ -151,26 +119,19 @@ namespace DashOwl.WebAPI
         /// </summary>
         /// <param name="id">The MediaAsset ID</param>
         /// <returns>Ok, if deleted successfully</returns>
-        [ResponseType(typeof(MediaAssetDetailsDto))]
+        [ResponseType(typeof(MediaAssetDto))]
         public async Task<IHttpActionResult> DeleteMediaAsset(int id)
         {
-            MediaAsset mediaAsset = await db.MediaAssets.FindAsync(id);
+            MediaAsset mediaAsset = _mediaAssetRepo.GetSingle(id);
+            var mediaAssetDto = Mapper.Map<MediaAsset, MediaAssetDto>(mediaAsset);
+            
             if (mediaAsset == null)
             {
                 return NotFound();
             }
 
-            db.MediaAssets.Remove(mediaAsset);
-            await db.SaveChangesAsync();
-
-            var mediaAssetDto = new MediaAssetDetailsDto
-            {
-                ID = mediaAsset.ID,
-                IncidentID = mediaAsset.IncidentID,
-                ServerURL = mediaAsset.ServerURL,
-                ExternalURL = mediaAsset.ExternalURL,
-                CreationDate = mediaAsset.CreationDate
-            };
+            _mediaAssetRepo.Delete(mediaAsset);
+            _mediaAssetRepo.Save();            
 
             return Ok(mediaAssetDto);
         }

@@ -30,6 +30,14 @@ namespace DashOwl.DAL
                     MapRightKey("VehicleID").
                     ToTable("IncidentVehicle")
                 );
+
+            modelBuilder.Entity<Incident>()
+                .HasMany(s => s.MediaAssets)
+                .WithMany(i => i.Incidents)
+                .Map(cs => cs.MapLeftKey("IncidentID").
+                    MapRightKey("MediaAssetID").
+                    ToTable("IncidentMediaAsset")
+                );
         }
     }
 }

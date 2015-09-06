@@ -15,6 +15,7 @@ using DashOwl.WebAPI;
 using System.Linq.Expressions;
 using System.Web.Http.ModelBinding;
 using Newtonsoft.Json.Linq;
+using AutoMapper;
 
 namespace DashOwl
 {
@@ -24,14 +25,13 @@ namespace DashOwl
     public class IncidentsController : ApiController
     {
         private DashOwlContext db = new DashOwlContext();
+        private readonly IIncidentRepository _incidentRepo;
 
-        List<IncidentDetailsDto> products = new List<IncidentDetailsDto>();
-
-        public IncidentsController(List<IncidentDetailsDto> products)
+        public IncidentsController(IIncidentRepository repository)
         {
-            this.products = products;
+            this._incidentRepo = repository;
         }
-        
+
         public IncidentsController()
         {
             db.Configuration.ProxyCreationEnabled = false;
@@ -41,26 +41,16 @@ namespace DashOwl
         /// Gets list of all Incidents
         /// </summary>
         /// <returns>A list of Incidents</returns>
-        public IList<IncidentDetailsDto> GetIncidents()
+        public async Task<IHttpActionResult> GetIncidents()
         {
-            return db.Incidents.Select(p => new IncidentDetailsDto
-                {
-                    ID = p.ID,
-                    CreationDate = p.CreationDate,
-                    Description = p.Description,
-                    MediaAssets = p.MediaAssets.Select(m => new MediaAssetDetailsDto
-                    {
-                        ID = m.ID,
-                        CreationDate = m.CreationDate,
-                        ExternalURL = m.ExternalURL,
-                        ServerURL = m.ServerURL
-                    }).ToList(),
-                    Vehicles = p.Vehicles.Select(v => new VehicleDetailsDto
-                    {
-                        ID = v.ID,
-                        PlateNumber = v.PlateNumber
-                    }).ToList()
-                }).ToList();
+            IList<Incident> incidents = _incidentRepo.GetAllIncidents();
+            IList<IncidentDetailsDto> incidentsDto = Mapper.Map<IList<Incident>, IList<IncidentDetailsDto>>(incidents);
+
+            if(incidentsDto == null)
+            {
+                return NotFound();
+            }
+            return Ok(incidentsDto);
         }
 
         /// <summary>
@@ -71,67 +61,35 @@ namespace DashOwl
         [ResponseType(typeof(IncidentDetailsDto))]
         public async Task<IHttpActionResult> GetIncident(int id)
         {
-            IncidentDetailsDto incident = await db.Incidents.Include(i => i.MediaAssets).Select(p => new IncidentDetailsDto
-                {
-                    ID = p.ID,
-                    CreationDate = p.CreationDate,
-                    Description = p.Description,
-                    MediaAssets = p.MediaAssets.Select(m => new MediaAssetDetailsDto
-                    {
-                        ID = m.ID,
-                        CreationDate = m.CreationDate,
-                        ExternalURL = m.ExternalURL,
-                        ServerURL = m.ServerURL
-                    }).ToList(),
-                    Vehicles = p.Vehicles.Select(v => new VehicleDetailsDto
-                    {
-                        ID = v.ID,
-                        PlateNumber = v.PlateNumber
-                    }).ToList()
-                })
-                .Where(i => i.ID == id)
-                .FirstOrDefaultAsync();
+            Incident incident = _incidentRepo.GetSingle(id);
+            IncidentDetailsDto incidentDto = Mapper.Map<Incident, IncidentDetailsDto>(incident);
 
-            if (incident == null)
+            if (incidentDto == null)
             {
                 return NotFound();
             }
 
-            return Ok(incident);
+            return Ok(incidentDto);
         }
 
         /// <summary>
         /// Updates Incident.
         /// </summary>
         /// <param name="id">Incident ID</param>
-        /// <param name="incident">Modified Incident</param>
+        /// <param name="incident">Modified Incident. JSON sample: {"ID":1,"CreationDate":"2015-05-01T00:00:00","Description":"Some dummy description 1 test123"}</param>
         /// <returns>Nothing, if operation was successful</returns>
         [ResponseType(typeof(void))]
-        public async Task<IHttpActionResult> PutIncident(int id, [FromBody] Incident incident)
+        public async Task<IHttpActionResult> PutIncident([FromBody] IncidentDetailsDto incidentDto)
         {
+            Incident incident = Mapper.Map<IncidentDetailsDto, Incident>(incidentDto);
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-           db.Incidents.Attach(incident);            
-           db.Entry(incident).Property(x => x.Description).IsModified = true;
-
-            try
-            {
-                await db.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!IncidentExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            _incidentRepo.Edit(incident);
+            _incidentRepo.Save();
 
             return StatusCode(HttpStatusCode.NoContent);
         }
@@ -139,26 +97,24 @@ namespace DashOwl
         /// <summary>
         /// Creates Incident.
         /// </summary>
-        /// <param name="incidentDetailsDto">A new Incident</param>
+        /// <param name="incidentDetailsDto">A new Incident. JSON sample:{"Description":"Some dummy description 1 test123","CreationDate":"2014-12-31T00:00:00"}</param>
         /// <returns>Created Incident</returns>
         [ResponseType(typeof(IncidentDetailsDto))]
-        public async Task<IHttpActionResult> PostIncident([ModelBinder]IncidentDetailsDto incidentDetailsDto)
+        public async Task<IHttpActionResult> PostIncident([FromBody]IncidentDetailsDto incidentDetailsDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            Incident incident = new Incident()
-            {
-                CreationDate = DateTime.Now,
-                Description = incidentDetailsDto.Description
-            };
-            
-            db.Incidents.Add(incident);
 
-            await db.SaveChangesAsync();
+            var incident = Mapper.Map<IncidentDetailsDto, Incident>(incidentDetailsDto);
 
-            return CreatedAtRoute("DefaultApi", new { id = incident.ID }, incident);
+            _incidentRepo.Add(incident);
+            _incidentRepo.Save();
+
+            incidentDetailsDto = Mapper.Map<Incident, IncidentDetailsDto>(incident);
+
+            return Ok(incidentDetailsDto);
         }
 
         /// <summary>
@@ -166,19 +122,21 @@ namespace DashOwl
         /// </summary>
         /// <param name="id">The Incident ID</param>
         /// <returns>Ok, if deleted successfully</returns>
-        [ResponseType(typeof(Incident))]
+        [ResponseType(typeof(IncidentDetailsDto))]
         public async Task<IHttpActionResult> DeleteIncident(int id)
         {
-            Incident incident = await db.Incidents.FindAsync(id);
+            Incident incident = _incidentRepo.GetSingle(id);
+            var incidentDto = Mapper.Map<Incident, IncidentDetailsDto>(incident);
+
             if (incident == null)
             {
                 return NotFound();
             }
 
-            db.Incidents.Remove(incident);
-            await db.SaveChangesAsync();
+            _incidentRepo.Delete(incident);
+            _incidentRepo.Save();
 
-            return Ok();
+            return Ok(incidentDto);
         }
 
         protected override void Dispose(bool disposing)

@@ -5,7 +5,7 @@ using System.Web;
 
 namespace DashOwl.WebAPI
 {
-    public class MediaAssetDetailsDto
+    public class MediaAssetDto
     {
         public int ID { get; set; }
         
